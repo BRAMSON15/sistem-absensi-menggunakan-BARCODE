@@ -1,0 +1,639 @@
+@extends('layouts.app')
+
+@section('title', 'Scan Absensi')
+
+@section('content')
+<h2 style="margin-bottom: 2rem;">Scan Absensi - {{ $kela->nama_kelas }}</h2>
+
+<div class="card">
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <p style="font-size: 1.2rem; margin-bottom: 1rem;">Silakan scan barcode kartu siswa</p>
+        <p style="color: #7f8c8d;">Tanggal: {{ date('d/m/Y') }}</p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #ddd;">
+        <button id="tab-camera" class="tab-button active" onclick="switchTab('camera')" style="padding: 1rem 2rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid #3498db; font-weight: bold; color: #3498db;">
+            📷 Scan dengan Kamera
+        </button>
+        <button id="tab-manual" class="tab-button" onclick="switchTab('manual')" style="padding: 1rem 2rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #7f8c8d;">
+            ⌨️ Input Manual NIS
+        </button>
+    </div>
+
+    <!-- Camera Scanner Tab -->
+    <div id="camera-tab" class="tab-content" style="display: block;">
+        <div style="max-width: 600px; margin: 0 auto;">
+            <!-- Tips Box -->
+            <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                <strong>💡 Tips untuk Scan Barcode dari Layar HP:</strong>
+                <ul style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
+                    <li>Atur kecerahan layar HP ke maksimal</li>
+                    <li>Jarak ideal: 15-25 cm dari kamera</li>
+                    <li>Pastikan tidak ada pantulan cahaya di layar</li>
+                    <li>Tahan HP dengan stabil, jangan goyang</li>
+                    <li>Coba berbagai sudut jika tidak terdeteksi</li>
+                    <li><strong>Alternatif: Gunakan Input Manual NIS</strong></li>
+                </ul>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <button id="start-camera" class="btn btn-success" onclick="startCamera()" style="font-size: 1.1rem; padding: 0.75rem 2rem;">
+                    📷 Aktifkan Kamera
+                </button>
+                <button id="stop-camera" class="btn btn-danger" onclick="stopCamera()" style="font-size: 1.1rem; padding: 0.75rem 2rem; display: none;">
+                    ⏹️ Matikan Kamera
+                </button>
+                <button id="capture-photo" class="btn btn-primary" onclick="capturePhoto()" style="font-size: 1.1rem; padding: 0.75rem 2rem; display: none; margin-left: 0.5rem;">
+                    📸 Ambil Foto
+                </button>
+            </div>
+
+            <!-- Video Preview -->
+            <div id="camera-container" style="display: none; position: relative; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; max-height: 480px;">
+                <!-- Quagga will inject video and canvas here -->
+            </div>
+
+            <div id="camera-status" style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 5px; margin-bottom: 1rem; display: none;">
+                <p style="margin: 0; color: #7f8c8d;">Arahkan barcode ke kamera...</p>
+            </div>
+
+            <!-- Detection Counter -->
+            <div id="detection-info" style="text-align: center; padding: 0.5rem; background: #e3f2fd; border-radius: 5px; margin-bottom: 1rem; display: none; font-size: 0.9rem;">
+                <span id="detection-count">Mencoba mendeteksi...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Input Tab -->
+    <div id="manual-tab" class="tab-content" style="display: none;">
+        <div style="max-width: 400px; margin: 0 auto;">
+            <div class="form-group">
+                <label for="barcode-manual">Masukkan NIS Siswa (5 digit)</label>
+                <input type="text" id="barcode-manual" class="form-control" placeholder="Contoh: 01223" maxlength="5" autofocus style="font-size: 1.5rem; text-align: center; padding: 1rem;">
+                <small style="color: #7f8c8d; display: block; margin-top: 0.5rem;">Tekan Enter setelah memasukkan NIS</small>
+            </div>
+        </div>
+    </div>
+
+    <div id="result" style="margin-top: 1rem;"></div>
+
+    <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #ddd;">
+        <h3 style="margin-bottom: 1rem;">Absensi Hari Ini</h3>
+        <div id="absensi-list">
+            <p style="text-align: center; color: #7f8c8d;">Belum ada yang absen</p>
+        </div>
+    </div>
+</div>
+
+@push('styles')
+<style>
+    @keyframes scan {
+        0% { top: 0; }
+        50% { top: 100%; }
+        100% { top: 0; }
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    .tab-button.active {
+        border-bottom-color: #3498db !important;
+        color: #3498db !important;
+        font-weight: bold;
+    }
+    
+    .tab-button:hover {
+        background: #f8f9fa;
+    }
+    
+    /* Quagga canvas styling */
+    #camera-container video {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+    
+    #camera-container canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    
+    #camera-container canvas.drawingBuffer {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+</style>
+@endpush
+
+@push('scripts')
+<!-- Quagga JS - Better barcode scanner -->
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+<script>
+    let cameraStream = null;
+    let isScanning = false;
+    let absensiData = [];
+    let lastScannedCode = '';
+    let lastScanTime = 0;
+    let detectionAttempts = 0;
+    let detectedCodes = {}; // Track code frequency
+
+    // Tab Switching
+    function switchTab(tab) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active');
+            btn.style.borderBottomColor = 'transparent';
+            btn.style.color = '#7f8c8d';
+            btn.style.fontWeight = 'normal';
+        });
+        
+        if (tab === 'camera') {
+            document.getElementById('tab-camera').classList.add('active');
+            document.getElementById('tab-camera').style.borderBottomColor = '#3498db';
+            document.getElementById('tab-camera').style.color = '#3498db';
+            document.getElementById('tab-camera').style.fontWeight = 'bold';
+            document.getElementById('camera-tab').style.display = 'block';
+            document.getElementById('manual-tab').style.display = 'none';
+        } else {
+            document.getElementById('tab-manual').classList.add('active');
+            document.getElementById('tab-manual').style.borderBottomColor = '#3498db';
+            document.getElementById('tab-manual').style.color = '#3498db';
+            document.getElementById('tab-manual').style.fontWeight = 'bold';
+            document.getElementById('camera-tab').style.display = 'none';
+            document.getElementById('manual-tab').style.display = 'block';
+            stopCamera();
+            document.getElementById('barcode-manual').focus();
+        }
+    }
+
+    // Camera Functions
+    async function startCamera() {
+        try {
+            const container = document.getElementById('camera-container');
+            const status = document.getElementById('camera-status');
+            const detectionInfo = document.getElementById('detection-info');
+            const startBtn = document.getElementById('start-camera');
+            const stopBtn = document.getElementById('stop-camera');
+            const captureBtn = document.getElementById('capture-photo');
+
+            console.log('Starting Quagga scanner...');
+
+            // Reset detection tracking
+            detectionAttempts = 0;
+            detectedCodes = {};
+
+            // Show camera UI
+            container.style.display = 'block';
+            status.style.display = 'block';
+            detectionInfo.style.display = 'block';
+            status.innerHTML = '<p style="margin: 0; color: #f39c12; font-weight: bold;">⏳ Memulai kamera...</p>';
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            captureBtn.style.display = 'inline-block';
+
+            // Initialize Quagga with optimized settings for screen scanning
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#camera-container'),
+                    constraints: {
+                        width: { min: 640, ideal: 1280, max: 1920 },
+                        height: { min: 480, ideal: 720, max: 1080 },
+                        facingMode: "environment",
+                        aspectRatio: { min: 1, max: 2 }
+                    },
+                },
+                locator: {
+                    patchSize: "medium", // Changed from large to medium for better screen detection
+                    halfSample: true // Enable for better performance
+                },
+                numOfWorkers: 4, // Increased workers
+                frequency: 5, // Reduced frequency for more thorough scanning
+                decoder: {
+                    readers: [
+                        "code_128_reader",
+                        "ean_reader",
+                        "ean_8_reader",
+                        "code_39_reader",
+                        "code_39_vin_reader",
+                        "codabar_reader",
+                        "upc_reader",
+                        "upc_e_reader",
+                        "i2of5_reader"
+                    ],
+                    debug: {
+                        drawBoundingBox: true,
+                        showFrequency: false,
+                        drawScanline: true,
+                        showPattern: false
+                    },
+                    multiple: false
+                },
+                locate: true
+            }, function(err) {
+                if (err) {
+                    console.error('Quagga initialization error:', err);
+                    status.innerHTML = '<p style="margin: 0; color: #e74c3c; font-weight: bold;">❌ Error: ' + err.message + '</p>';
+                    stopCamera();
+                    showError('Gagal memulai kamera: ' + err.message);
+                    return;
+                }
+                
+                console.log("Quagga initialization finished. Ready to start");
+                Quagga.start();
+                isScanning = true;
+                
+                status.innerHTML = '<p style="margin: 0; color: #27ae60; font-weight: bold;">📷 Kamera Aktif - Arahkan barcode ke kamera<br><small style="color: #7f8c8d;">Jarak ideal: 15-25 cm, layar HP maksimal terang</small></p>';
+            });
+
+            // Listen for detected barcodes with confidence scoring
+            Quagga.onDetected(function(result) {
+                if (!isScanning) return;
+
+                const code = result.codeResult.code;
+                const now = Date.now();
+                
+                // Calculate confidence based on error rate
+                const errors = result.codeResult.decodedCodes.filter(x => x.error !== undefined);
+                const avgError = errors.reduce((sum, x) => sum + x.error, 0) / errors.length;
+                const confidence = (1 - avgError) * 100;
+                
+                console.log('Barcode detected:', code, 'Confidence:', confidence.toFixed(2) + '%');
+
+                // Track code frequency for validation
+                if (!detectedCodes[code]) {
+                    detectedCodes[code] = { count: 0, confidence: [] };
+                }
+                detectedCodes[code].count++;
+                detectedCodes[code].confidence.push(confidence);
+
+                // Update detection info
+                document.getElementById('detection-count').innerHTML = 
+                    `🔍 Terdeteksi: <strong>${code}</strong> (${detectedCodes[code].count}x, ${confidence.toFixed(0)}% akurat)`;
+
+                // Only process if detected multiple times OR high confidence
+                if (detectedCodes[code].count >= 2 || confidence > 85) {
+                    // Prevent duplicate scans within 3 seconds
+                    if (code === lastScannedCode && (now - lastScanTime) < 3000) {
+                        console.log('Duplicate scan ignored');
+                        return;
+                    }
+
+                    lastScannedCode = code;
+                    lastScanTime = now;
+
+                    // Update status
+                    status.innerHTML = '<p style="margin: 0; color: #f39c12; font-weight: bold;">⏳ Memproses barcode: ' + code + '</p>';
+
+                    // Pause scanning
+                    isScanning = false;
+                    Quagga.pause();
+
+                    // Process the barcode
+                    processScan(code).then(() => {
+                        // Reset detection tracking
+                        detectedCodes = {};
+                        
+                        // Resume scanning after 3 seconds
+                        setTimeout(() => {
+                            if (Quagga) {
+                                Quagga.start();
+                                isScanning = true;
+                                status.innerHTML = '<p style="margin: 0; color: #27ae60; font-weight: bold;">📷 Kamera Aktif - Arahkan barcode ke kamera</p>';
+                                document.getElementById('detection-count').innerHTML = 'Mencoba mendeteksi...';
+                            }
+                        }, 3000);
+                    });
+                }
+            });
+
+            // Listen for processing events (for debugging)
+            Quagga.onProcessed(function(result) {
+                detectionAttempts++;
+                
+                // Update attempt counter every 10 attempts
+                if (detectionAttempts % 10 === 0) {
+                    const detectionCount = document.getElementById('detection-count');
+                    if (Object.keys(detectedCodes).length === 0) {
+                        detectionCount.innerHTML = `🔍 Mencoba mendeteksi... (${detectionAttempts} percobaan)`;
+                    }
+                }
+
+                const drawingCtx = Quagga.canvas.ctx.overlay;
+                const drawingCanvas = Quagga.canvas.dom.overlay;
+
+                if (result) {
+                    if (result.boxes) {
+                        drawingCtx.clearRect(0, 0, parseInt(drawingCanvas.getAttribute("width")), parseInt(drawingCanvas.getAttribute("height")));
+                        result.boxes.filter(function (box) {
+                            return box !== result.box;
+                        }).forEach(function (box) {
+                            Quagga.ImageDebug.drawPath(box, {x: 0, y: 1}, drawingCtx, {color: "green", lineWidth: 2});
+                        });
+                    }
+
+                    if (result.box) {
+                        Quagga.ImageDebug.drawPath(result.box, {x: 0, y: 1}, drawingCtx, {color: "#00F", lineWidth: 2});
+                    }
+
+                    if (result.codeResult && result.codeResult.code) {
+                        Quagga.ImageDebug.drawPath(result.line, {x: 'x', y: 'y'}, drawingCtx, {color: 'red', lineWidth: 3});
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('Error starting camera:', error);
+            showError('Tidak dapat mengakses kamera: ' + error.message);
+        }
+    }
+
+    function stopCamera() {
+        isScanning = false;
+        lastScannedCode = '';
+        lastScanTime = 0;
+        detectionAttempts = 0;
+        detectedCodes = {};
+        
+        if (Quagga) {
+            console.log('Stopping Quagga...');
+            Quagga.stop();
+        }
+
+        const container = document.getElementById('camera-container');
+        const status = document.getElementById('camera-status');
+        const detectionInfo = document.getElementById('detection-info');
+        const startBtn = document.getElementById('start-camera');
+        const stopBtn = document.getElementById('stop-camera');
+        const captureBtn = document.getElementById('capture-photo');
+
+        container.style.display = 'none';
+        status.style.display = 'none';
+        detectionInfo.style.display = 'none';
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+        captureBtn.style.display = 'none';
+        
+        console.log('Camera stopped');
+    }
+
+    // Capture photo for manual processing
+    function capturePhoto() {
+        if (!Quagga) {
+            showError('Kamera belum aktif');
+            return;
+        }
+
+        try {
+            // Get the current video frame
+            const track = Quagga.CameraAccess.getActiveTrack();
+            if (!track) {
+                showError('Tidak dapat mengakses video stream');
+                return;
+            }
+
+            // Create canvas to capture frame
+            const video = document.querySelector('#camera-container video');
+            if (!video) {
+                showError('Video element tidak ditemukan');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            // Pause live scanning
+            isScanning = false;
+            Quagga.pause();
+
+            // Show processing message
+            document.getElementById('camera-status').innerHTML = 
+                '<p style="margin: 0; color: #f39c12; font-weight: bold;">📸 Memproses foto...</p>';
+
+            // Try to decode the captured image
+            Quagga.decodeSingle({
+                decoder: {
+                    readers: [
+                        "code_128_reader",
+                        "ean_reader",
+                        "ean_8_reader",
+                        "code_39_reader",
+                        "code_39_vin_reader",
+                        "codabar_reader",
+                        "upc_reader",
+                        "upc_e_reader",
+                        "i2of5_reader"
+                    ]
+                },
+                locate: true,
+                src: canvas.toDataURL()
+            }, function(result) {
+                if (result && result.codeResult) {
+                    const code = result.codeResult.code;
+                    console.log('Captured barcode:', code);
+                    processScan(code).then(() => {
+                        setTimeout(() => {
+                            if (Quagga) {
+                                Quagga.start();
+                                isScanning = true;
+                                document.getElementById('camera-status').innerHTML = 
+                                    '<p style="margin: 0; color: #27ae60; font-weight: bold;">📷 Kamera Aktif</p>';
+                            }
+                        }, 3000);
+                    });
+                } else {
+                    showError('Tidak dapat mendeteksi barcode dari foto. Coba lagi dengan posisi yang lebih baik.');
+                    // Resume scanning
+                    setTimeout(() => {
+                        if (Quagga) {
+                            Quagga.start();
+                            isScanning = true;
+                            document.getElementById('camera-status').innerHTML = 
+                                '<p style="margin: 0; color: #27ae60; font-weight: bold;">📷 Kamera Aktif</p>';
+                        }
+                    }, 2000);
+                }
+            });
+
+        } catch (error) {
+            console.error('Error capturing photo:', error);
+            showError('Gagal mengambil foto: ' + error.message);
+            // Resume scanning
+            if (Quagga) {
+                Quagga.start();
+                isScanning = true;
+            }
+        }
+    }
+
+    // Manual Input
+    const barcodeManual = document.getElementById('barcode-manual');
+    barcodeManual.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const barcode = this.value.trim();
+            
+            if (barcode) {
+                processScan(barcode);
+                this.value = '';
+            }
+        }
+    });
+
+    // Process Scan
+    async function processScan(barcode) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = '<div style="text-align: center; padding: 1rem; background: #e3f2fd; border-radius: 5px;"><p>⏳ Memproses absensi...</p></div>';
+
+        console.log('Processing barcode:', barcode);
+
+        try {
+            const response = await fetch('{{ route("guru.absensi.process", $kela) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ barcode: barcode })
+            });
+
+            console.log('Response status:', response.status);
+            const data = await response.json();
+            console.log('Response data:', data);
+
+            if (data.success) {
+                showSuccess(data.message, data.data);
+                addToAbsensiList(data.data);
+            } else {
+                showError(data.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showError('Terjadi kesalahan saat memproses scan: ' + error.message);
+        }
+    }
+
+    function showSuccess(message, data) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = `
+            <div style="background: #d4edda; color: #155724; padding: 1.5rem; border-radius: 8px; border: 2px solid #c3e6cb; animation: slideIn 0.3s;">
+                <div style="font-size: 3rem; text-align: center; margin-bottom: 0.5rem;">✓</div>
+                <strong style="font-size: 1.2rem;">${message}</strong><br><br>
+                <div style="background: white; padding: 1rem; border-radius: 5px; margin-top: 0.5rem;">
+                    <strong>Nama:</strong> ${data.nama}<br>
+                    <strong>NIS:</strong> ${data.nis}<br>
+                    <strong>Waktu:</strong> ${data.waktu}<br>
+                    <strong>Status:</strong> <span class="badge badge-success">Hadir</span>
+                </div>
+            </div>
+        `;
+        
+        // Play beep sound
+        playBeep();
+        
+        setTimeout(() => {
+            resultDiv.innerHTML = '';
+        }, 5000);
+    }
+
+    function showError(message) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = `
+            <div style="background: #f8d7da; color: #721c24; padding: 1.5rem; border-radius: 8px; border: 2px solid #f5c6cb; animation: shake 0.5s;">
+                <div style="font-size: 3rem; text-align: center; margin-bottom: 0.5rem;">✗</div>
+                <strong style="font-size: 1.1rem;">${message}</strong>
+            </div>
+        `;
+        
+        setTimeout(() => {
+            resultDiv.innerHTML = '';
+        }, 5000);
+    }
+
+    function playBeep() {
+        // Create a simple beep sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+    }
+
+    function addToAbsensiList(data) {
+        absensiData.unshift(data);
+        updateAbsensiList();
+    }
+
+    function updateAbsensiList() {
+        const absensiList = document.getElementById('absensi-list');
+        
+        if (absensiData.length === 0) {
+            absensiList.innerHTML = '<p style="text-align: center; color: #7f8c8d;">Belum ada yang absen</p>';
+            return;
+        }
+
+        let html = '<table style="width: 100%;"><thead><tr><th>No</th><th>NIS</th><th>Nama</th><th>Waktu</th><th>Status</th></tr></thead><tbody>';
+        
+        absensiData.forEach((item, index) => {
+            const statusBadge = '<span class="badge badge-success">Hadir</span>';
+            
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.nis}</td>
+                    <td>${item.nama}</td>
+                    <td>${item.waktu}</td>
+                    <td>${statusBadge}</td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        absensiList.innerHTML = html;
+    }
+
+    // Auto focus on manual input when page loads
+    window.addEventListener('load', function() {
+        // Start with manual tab by default
+        switchTab('manual');
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        stopCamera();
+    });
+</script>
+@endpush
+@endsection

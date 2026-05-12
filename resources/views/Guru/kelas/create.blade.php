@@ -1,0 +1,100 @@
+@extends('layouts.app')
+
+@section('title', 'Buat Kelas Baru')
+@section('page_title', 'Manajemen Kelas')
+
+@section('content')
+<div class="section-header" style="margin-bottom: 2rem;">
+    <div>
+        <h2 class="section-title">Buat Kelas Baru</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Silahkan isi formulir di bawah ini untuk membuat kelas baru.</p>
+    </div>
+    <a href="{{ route('guru.kelas.index') }}" class="btn btn-secondary" style="border-radius: 10px; padding: 0.6rem 1.25rem;">
+        <i data-lucide="arrow-left"></i>
+        Kembali
+    </a>
+</div>
+
+<div class="card" style="max-width: 800px; border-radius: var(--radius-md); border: 1px solid var(--border);">
+    <div class="card-title" style="border-bottom: 1px solid var(--border); margin: -1.5rem -1.5rem 2rem -1.5rem; padding: 1.5rem; background: #f8fafc; border-radius: var(--radius-md) var(--radius-md) 0 0;">
+        <i data-lucide="plus-circle" style="color: var(--primary);"></i>
+        Formulir Kelas Baru
+    </div>
+
+    <form action="{{ route('guru.kelas.store') }}" method="POST">
+        @csrf
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div class="form-group">
+                <label for="mata_pelajaran_id">Mata Pelajaran <span style="color: var(--danger);">*</span></label>
+                <select id="mata_pelajaran_id" name="mata_pelajaran_id" class="form-control @error('mata_pelajaran_id') is-invalid @enderror" required>
+                    <option value="">Pilih Mata Pelajaran</option>
+                    @foreach($mataPelajarans as $mapel)
+                        <option value="{{ $mapel->id }}" {{ old('mata_pelajaran_id') == $mapel->id ? 'selected' : '' }}>
+                            {{ $mapel->nama_mapel }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('mata_pelajaran_id')
+                    <span class="invalid-feedback">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <div class="form-group">
+                <label for="tingkat_kelas">Tingkat Kelas <span style="color: var(--danger);">*</span></label>
+                <select id="tingkat_kelas" name="tingkat_kelas" class="form-control @error('tingkat_kelas') is-invalid @enderror" required>
+                    <option value="">Pilih Tingkat</option>
+                    <option value="1" {{ old('tingkat_kelas') == 1 ? 'selected' : '' }}>Kelas 1</option>
+                    <option value="2" {{ old('tingkat_kelas') == 2 ? 'selected' : '' }}>Kelas 2</option>
+                    <option value="3" {{ old('tingkat_kelas') == 3 ? 'selected' : '' }}>Kelas 3</option>
+                </select>
+                @error('tingkat_kelas')
+                    <span class="invalid-feedback">{{ $message }}</span>
+                @enderror
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="nama_kelas">Nama Kelas <span style="color: var(--danger);">*</span></label>
+            <input type="text" id="nama_kelas" name="nama_kelas" class="form-control @error('nama_kelas') is-invalid @enderror" value="{{ old('nama_kelas') }}" placeholder="Contoh: Matematika - Kelas 12 IPA 1" required>
+            @error('nama_kelas')
+                <span class="invalid-feedback">{{ $message }}</span>
+            @enderror
+        </div>
+
+        <div class="form-group">
+            <label for="jurusan">Jurusan (Opsional)</label>
+            <select id="jurusan" name="jurusan" class="form-control @error('jurusan') is-invalid @enderror">
+                <option value="">Pilih Jurusan</option>
+                <option value="TKJ" {{ old('jurusan') == 'TKJ' ? 'selected' : '' }}>Teknik Komputer dan Jaringan (TKJ)</option>
+                <option value="RPL" {{ old('jurusan') == 'RPL' ? 'selected' : '' }}>Rekayasa Perangkat Lunak (RPL)</option>
+                <option value="MM" {{ old('jurusan') == 'MM' ? 'selected' : '' }}>Multimedia (MM)</option>
+                <option value="TBSM" {{ old('jurusan') == 'TBSM' ? 'selected' : '' }}>Teknik dan Bisnis Sepeda Motor (TBSM)</option>
+                <option value="TKRO" {{ old('jurusan') == 'TKRO' ? 'selected' : '' }}>Teknik Kendaraan Ringan Otomotif (TKRO)</option>
+                <option value="TKR" {{ old('jurusan') == 'TKR' ? 'selected' : '' }}>Teknik Kendaraan Ringan (TKR)</option>
+                <option value="TEI" {{ old('jurusan') == 'TEI' ? 'selected' : '' }}>Teknik Elektronika Industri (TEI)</option>
+                <option value="TAV" {{ old('jurusan') == 'TAV' ? 'selected' : '' }}>Teknik Audio Video (TAV)</option>
+                <option value="TITL" {{ old('jurusan') == 'TITL' ? 'selected' : '' }}>Teknik Instalasi Tenaga Listrik (TITL)</option>
+                <option value="TM" {{ old('jurusan') == 'TM' ? 'selected' : '' }}>Teknik Mesin (TM)</option>
+                <option value="TP" {{ old('jurusan') == 'TP' ? 'selected' : '' }}>Teknik Pengelasan (TP)</option>
+                <option value="AKL" {{ old('jurusan') == 'AKL' ? 'selected' : '' }}>Akuntansi dan Keuangan Lembaga (AKL)</option>
+                <option value="OTKP" {{ old('jurusan') == 'OTKP' ? 'selected' : '' }}>Otomatisasi dan Tata Kelola Perkantoran (OTKP)</option>
+                <option value="BDP" {{ old('jurusan') == 'BDP' ? 'selected' : '' }}>Bisnis Daring dan Pemasaran (BDP)</option>
+            </select>
+            @error('jurusan')
+                <span class="invalid-feedback">{{ $message }}</span>
+            @enderror
+        </div>
+
+        <div class="form-actions" style="border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 2.5rem;">
+            <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);">
+                <i data-lucide="save"></i>
+                Simpan Kelas
+            </button>
+            <a href="{{ route('guru.kelas.index') }}" class="btn btn-secondary" style="padding: 0.75rem 2rem; border-radius: 12px;">
+                Batal
+            </a>
+        </div>
+    </form>
+</div>
+@endsection
