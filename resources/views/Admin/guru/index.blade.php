@@ -8,8 +8,42 @@
         <h2 style="margin-bottom: 0.5rem;">Data Guru</h2>
         <p id="totalInfo" style="color: var(--text-muted); font-size: 0.9rem;">Total: {{ $gurus->count() }} guru</p>
     </div>
-    <a href="{{ route('admin.guru.create') }}" class="btn btn-primary">+ Tambah Guru</a>
+    <div style="display: flex; gap: 10px;">
+        <form action="{{ route('admin.guru.import') }}" method="POST" enctype="multipart/form-data" style="display: flex; align-items: center; gap: 10px;">
+            @csrf
+            <input type="file" name="file" accept=".xlsx, .xls, .csv" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
+            <button type="submit" class="btn btn-success" style="background-color: #28a745; color: white; border: none; padding: 0.6rem 1rem; border-radius: 4px; cursor: pointer;">Import Excel</button>
+        </form>
+        <form action="{{ route('admin.guru.destroyAll') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus SEMUA data guru? Tindakan ini tidak dapat dibatalkan.')">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn btn-danger" style="background-color: #dc3545; color: white; border: none; padding: 0.6rem 1rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; height: 100%;">Hapus Semua</button>
+        </form>
+        <a href="{{ route('admin.guru.create') }}" class="btn btn-primary" style="display: flex; align-items: center; height: 100%;">+ Tambah Guru</a>
+    </div>
 </div>
+
+@if (session('success'))
+    <div style="padding: 1rem; margin-bottom: 1rem; background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 8px;">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if (session('error'))
+    <div style="padding: 1rem; margin-bottom: 1rem; background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 8px;">
+        {{ session('error') }}
+    </div>
+@endif
+
+@if ($errors->any())
+    <div style="padding: 1rem; margin-bottom: 1rem; background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 8px;">
+        <ul style="margin: 0; padding-left: 1.5rem;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
 <!-- Search Section -->
 <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
@@ -32,13 +66,16 @@
 </div>
 
 <div class="card">
-    <table id="guruTable">
-        <thead>
+    <div style="overflow-x: auto; white-space: nowrap;">
+        <table id="guruTable" style="width: 100%; min-width: 1000px;">
+            <thead>
             <tr>
                 <th>No</th>
                 <th>NIP</th>
                 <th>Nama Guru</th>
                 <th>Username</th>
+                <th>Agama</th>
+                <th>Alamat</th>
                 <th>Aksi</th>
             </tr>
         </thead>
@@ -52,6 +89,8 @@
                     <td>{{ $guru->nip }}</td>
                     <td>{{ $guru->nama_guru }}</td>
                     <td>{{ $guru->user->username }}</td>
+                    <td>{{ $guru->agama ?? '-' }}</td>
+                    <td>{{ $guru->alamat ?? '-' }}</td>
                     <td>
                         <a href="{{ route('admin.guru.edit', $guru) }}" class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">Edit</a>
                         <form action="{{ route('admin.guru.destroy', $guru) }}" method="POST" style="display: inline;">
@@ -63,11 +102,12 @@
                 </tr>
             @empty
                 <tr id="emptyRow">
-                    <td colspan="5" style="text-align: center;">Belum ada data guru</td>
+                    <td colspan="7" style="text-align: center;">Belum ada data guru</td>
                 </tr>
             @endforelse
         </tbody>
-    </table>
+        </table>
+    </div>
 
     <!-- No Results Message -->
     <div id="noResults" style="display: none; padding: 3rem; text-align: center; background: #fff1f2; border-radius: 12px; margin-top: 1rem;">

@@ -48,10 +48,10 @@ class MataPelajaranService
     }
 
     /**
-     * Find subject by code
+     * Delete all subjects
      */
-    public function findMataPelajaranByKode(string $kode)
+    public function deleteAll()
     {
-        return MataPelajaran::where('kode_mapel', $kode)->first();
+        return MataPelajaran::query()->delete();
     }
 }

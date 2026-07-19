@@ -23,10 +23,17 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
+    Route::delete('guru/destroy-all', [GuruController::class, 'destroyAll'])->name('guru.destroyAll');
     Route::resource('guru', GuruController::class);
+    Route::post('guru/import', [GuruController::class, 'import'])->name('guru.import');
+    Route::delete('siswa/destroy-all', [SiswaController::class, 'destroyAll'])->name('siswa.destroyAll');
     Route::resource('siswa', SiswaController::class);
+    Route::post('siswa/import', [SiswaController::class, 'import'])->name('siswa.import');
     Route::get('siswa/{siswa}/barcode', [SiswaController::class, 'generateBarcode'])->name('siswa.barcode');
+    
+    Route::delete('mata-pelajaran/destroy-all', [MataPelajaranController::class, 'destroyAll'])->name('mata-pelajaran.destroyAll');
     Route::resource('mata-pelajaran', MataPelajaranController::class);
+    Route::post('mata-pelajaran/import', [MataPelajaranController::class, 'import'])->name('mata-pelajaran.import');
 });
 
 // Guru Routes

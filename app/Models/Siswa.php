@@ -16,6 +16,11 @@ class Siswa extends Model
         'kelas',
         'jurusan',
         'barcode',
+        'data_tambahan',
+    ];
+
+    protected $casts = [
+        'data_tambahan' => 'array',
     ];
 
     public function kelasList(): BelongsToMany

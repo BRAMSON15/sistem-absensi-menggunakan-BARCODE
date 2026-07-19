@@ -9,7 +9,12 @@ class MataPelajaran extends Model
 {
     protected $fillable = [
         'nama_mapel',
-        'kode_mapel',
+        'nama_guru',
+        'data_tambahan',
+    ];
+
+    protected $casts = [
+        'data_tambahan' => 'array',
     ];
 
     public function kelas(): HasMany

@@ -69,6 +69,20 @@ class SiswaService
     }
 
     /**
+     * Delete all students
+     */
+    public function deleteAllSiswas()
+    {
+        // Delete all photos first
+        $fotos = Siswa::whereNotNull('foto')->pluck('foto');
+        if ($fotos->count() > 0) {
+            Storage::disk('public')->delete($fotos->toArray());
+        }
+        
+        return Siswa::query()->delete();
+    }
+
+    /**
      * Find student by ID
      */
     public function findSiswaById(int $id)

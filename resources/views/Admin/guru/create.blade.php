@@ -41,6 +41,22 @@
             @enderror
         </div>
 
+        <div class="form-group">
+            <label for="agama">Agama</label>
+            <input type="text" id="agama" name="agama" class="form-control" value="{{ old('agama') }}">
+            @error('agama')
+                <small style="color: #e74c3c;">{{ $message }}</small>
+            @enderror
+        </div>
+
+        <div class="form-group">
+            <label for="alamat">Alamat</label>
+            <textarea id="alamat" name="alamat" class="form-control" rows="3">{{ old('alamat') }}</textarea>
+            @error('alamat')
+                <small style="color: #e74c3c;">{{ $message }}</small>
+            @enderror
+        </div>
+
         <div style="display: flex; gap: 1rem;">
             <button type="submit" class="btn btn-primary">Simpan</button>
             <a href="{{ route('admin.guru.index') }}" class="btn btn-secondary">Batal</a>

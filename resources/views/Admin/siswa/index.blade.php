@@ -8,8 +8,42 @@
         <h2 style="margin-bottom: 0.5rem;">Data Siswa</h2>
         <p id="totalInfo" style="color: var(--text-muted); font-size: 0.9rem;">Total: {{ $siswas->count() }} siswa</p>
     </div>
-    <a href="{{ route('admin.siswa.create') }}" class="btn btn-primary">+ Tambah Siswa</a>
+    <div style="display: flex; gap: 10px;">
+        <form action="{{ route('admin.siswa.import') }}" method="POST" enctype="multipart/form-data" style="display: flex; align-items: center; gap: 10px;">
+            @csrf
+            <input type="file" name="file" accept=".xlsx, .xls, .csv" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
+            <button type="submit" class="btn btn-success" style="background-color: #28a745; color: white; border: none; padding: 0.6rem 1rem; border-radius: 4px; cursor: pointer;">Import Excel</button>
+        </form>
+        <form action="{{ route('admin.siswa.destroyAll') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus SEMUA data siswa? Tindakan ini tidak dapat dibatalkan.')">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn btn-danger" style="background-color: #dc3545; color: white; border: none; padding: 0.6rem 1rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; height: 100%;">Hapus Semua</button>
+        </form>
+        <a href="{{ route('admin.siswa.create') }}" class="btn btn-primary" style="display: flex; align-items: center; height: 100%;">+ Tambah Siswa</a>
+    </div>
 </div>
+
+@if (session('success'))
+    <div style="padding: 1rem; margin-bottom: 1rem; background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 8px;">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if (session('error'))
+    <div style="padding: 1rem; margin-bottom: 1rem; background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 8px;">
+        {{ session('error') }}
+    </div>
+@endif
+
+@if ($errors->any())
+    <div style="padding: 1rem; margin-bottom: 1rem; background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 8px;">
+        <ul style="margin: 0; padding-left: 1.5rem;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
 <!-- Search and Filter Section -->
 <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
@@ -62,16 +96,31 @@
     </div>
 </div>
 
+@php
+    $extraColumns = [];
+    foreach($siswas as $siswa) {
+        if (is_array($siswa->data_tambahan)) {
+            foreach(array_keys($siswa->data_tambahan) as $key) {
+                // Ignore "No" or "no" because we already have a row number column
+                if (strtolower(trim($key)) !== 'no' && !in_array($key, $extraColumns)) {
+                    $extraColumns[] = $key;
+                }
+            }
+        }
+    }
+@endphp
+
 <div class="card">
-    <table id="siswaTable">
-        <thead>
+    <div style="overflow-x: auto; white-space: nowrap;">
+        <table id="siswaTable" style="width: 100%; min-width: 1000px;">
+            <thead>
             <tr>
                 <th>No</th>
-                <th>NIS</th>
+                <th>NISN</th>
                 <th>Nama Siswa</th>
-                <th>Jurusan</th>
-                <th>Kelas</th>
-                <th>Tahun Angkatan</th>
+                @foreach($extraColumns as $col)
+                    <th>{{ $col }}</th>
+                @endforeach
                 <th>Aksi</th>
             </tr>
         </thead>
@@ -85,9 +134,9 @@
                     <td class="row-number">{{ $index + 1 }}</td>
                     <td>{{ $siswa->nis }}</td>
                     <td>{{ $siswa->nama_siswa }}</td>
-                    <td>{{ $siswa->jurusan ?? '-' }}</td>
-                    <td>{{ $siswa->kelas }}</td>
-                    <td>{{ $siswa->tahun_angkatan }}</td>
+                    @foreach($extraColumns as $col)
+                        <td>{{ isset($siswa->data_tambahan[$col]) ? $siswa->data_tambahan[$col] : '-' }}</td>
+                    @endforeach
                     <td>
                         <a href="{{ route('admin.siswa.barcode', $siswa) }}" class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;" target="_blank">Barcode</a>
                         <a href="{{ route('admin.siswa.edit', $siswa) }}" class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">Edit</a>
@@ -100,11 +149,12 @@
                 </tr>
             @empty
                 <tr id="emptyRow">
-                    <td colspan="7" style="text-align: center;">Belum ada data siswa</td>
+                    <td colspan="{{ 4 + count($extraColumns) }}" style="text-align: center;">Belum ada data siswa</td>
                 </tr>
             @endforelse
         </tbody>
-    </table>
+        </table>
+    </div>
 
     <!-- No Results Message -->
     <div id="noResults" style="display: none; padding: 3rem; text-align: center; background: #fff1f2; border-radius: 12px; margin-top: 1rem;">

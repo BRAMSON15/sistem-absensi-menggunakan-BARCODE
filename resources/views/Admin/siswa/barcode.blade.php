@@ -454,20 +454,12 @@
                     <div class="info-section-ktp">
                         <div>
                             <div class="info-row-ktp">
-                                <div class="info-label-ktp">NIS</div>
+                                <div class="info-label-ktp">NISN</div>
                                 <div class="info-value-ktp large">{{ $siswa->nis }}</div>
                             </div>
                             <div class="info-row-ktp">
                                 <div class="info-label-ktp">Nama Lengkap</div>
                                 <div class="info-value-ktp">{{ $siswa->nama_siswa }}</div>
-                            </div>
-                            <div class="info-row-ktp">
-                                <div class="info-label-ktp">Kelas / Angkatan</div>
-                                <div class="info-value-ktp">{{ $siswa->kelas }} / {{ $siswa->tahun_angkatan }}</div>
-                            </div>
-                            <div class="info-row-ktp">
-                                <div class="info-label-ktp">Jurusan</div>
-                                <div class="info-value-ktp">{{ $siswa->jurusan ?? '-' }}</div>
                             </div>
                         </div>
 

@@ -36,6 +36,8 @@ class GuruService
                 'user_id' => $user->id,
                 'nama_guru' => $data['nama_guru'],
                 'nip' => $data['nip'],
+                'agama' => $data['agama'] ?? null,
+                'alamat' => $data['alamat'] ?? null,
             ]);
 
             return $guru->load('user');
@@ -66,6 +68,8 @@ class GuruService
             $guru->update([
                 'nama_guru' => $data['nama_guru'],
                 'nip' => $data['nip'],
+                'agama' => $data['agama'] ?? $guru->agama,
+                'alamat' => $data['alamat'] ?? $guru->alamat,
             ]);
 
             return $guru->fresh('user');
@@ -81,6 +85,19 @@ class GuruService
             $user = $guru->user;
             $guru->delete();
             $user->delete();
+            return true;
+        });
+    }
+
+    /**
+     * Delete all gurus and associated users
+     */
+    public function deleteAllGurus()
+    {
+        return DB::transaction(function () {
+            $userIds = Guru::pluck('user_id');
+            Guru::query()->delete();
+            User::whereIn('id', $userIds)->delete();
             return true;
         });
     }
