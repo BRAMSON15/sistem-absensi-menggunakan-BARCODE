@@ -111,7 +111,9 @@ class MataPelajaranController extends Controller
         try {
             $file = $request->file('file');
             $extension = $file->getClientOriginalExtension();
-            $rows = SimpleExcelReader::create($file->getRealPath(), $extension)->getRows();
+            $rows = SimpleExcelReader::create($file->getRealPath(), $extension)
+                ->noHeaderRow()
+                ->getRows();
             
             $importedCount = 0;
             $isDataRow = false;
@@ -124,21 +126,37 @@ class MataPelajaranController extends Controller
                 $values = array_values($row);
 
                 if (!$isDataRow) {
-                    foreach ($values as $index => $val) {
-                        $valStr = trim(strtolower((string)$val));
-                        if (empty($valStr)) continue;
-                        $headerColumns[$index] = trim((string)$val);
-                        
-                        if ($valStr === 'nama mapel' || $valStr === 'mata pelajaran' || $valStr === 'mapel') {
-                            $namaMapelIndex = $index;
-                        } else if ($valStr === 'nama guru' || $valStr === 'guru') {
-                            $namaGuruIndex = $index;
-                        } else if ($valStr === 'no' || $valStr === 'nomor') {
-                            $noIndex = $index;
-                        }
+                    $nonEmptyCount = 0;
+                    foreach ($values as $val) {
+                        if (!empty(trim((string)$val))) $nonEmptyCount++;
                     }
 
-                    if ($namaMapelIndex !== -1) {
+                    if ($nonEmptyCount > 0) {
+                        foreach ($values as $index => $val) {
+                            $valStr = trim(strtolower((string)$val));
+                            if (empty($valStr)) continue;
+                            $headerColumns[$index] = trim((string)$val);
+                            
+                            if (str_contains($valStr, 'no') || str_contains($valStr, 'nomor')) {
+                                $noIndex = $index;
+                            } else if (str_contains($valStr, 'mapel') || str_contains($valStr, 'mata pelajaran') || str_contains($valStr, 'nama')) {
+                                // Prefer first 'nama' column for mapel unless we already found a better one
+                                if ($namaMapelIndex === -1) $namaMapelIndex = $index;
+                            } else if (str_contains($valStr, 'guru') || str_contains($valStr, 'pengajar')) {
+                                $namaGuruIndex = $index;
+                            }
+                        }
+
+                        // Ultimate Fallback
+                        if ($namaMapelIndex === -1) {
+                            foreach ($headerColumns as $index => $header) {
+                                if ($index !== $noIndex && $index !== $namaGuruIndex) {
+                                    $namaMapelIndex = $index;
+                                    break;
+                                }
+                            }
+                        }
+
                         $isDataRow = true;
                     }
                     continue;

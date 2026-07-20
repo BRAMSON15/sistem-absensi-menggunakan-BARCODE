@@ -25,7 +25,8 @@ class SiswaController extends Controller
 
     public function create()
     {
-        return view('Admin.siswa.create');
+        $jurusans = \App\Models\Jurusan::all();
+        return view('Admin.siswa.create', compact('jurusans'));
     }
 
     public function store(Request $request)
@@ -47,7 +48,8 @@ class SiswaController extends Controller
 
     public function edit(Siswa $siswa)
     {
-        return view('Admin.siswa.edit', compact('siswa'));
+        $jurusans = \App\Models\Jurusan::all();
+        return view('Admin.siswa.edit', compact('siswa', 'jurusans'));
     }
 
     public function update(Request $request, Siswa $siswa)
@@ -131,29 +133,55 @@ class SiswaController extends Controller
                 $values = array_values($row);
 
                 // Find the header row dynamically
+                // Find the header row dynamically
                 if (!$isDataRow) {
-                    foreach ($values as $index => $val) {
-                        $valStr = trim(strtolower((string)$val));
-                        if (empty($valStr)) continue;
-                        $headerColumns[$index] = trim((string)$val);
-                        
-                        if ($valStr === 'nama' || $valStr === 'nama siswa') {
-                            $namaIndex = $index;
-                        } else if ($valStr === 'nis' || $valStr === 'nisn') {
-                            $nisIndex = $index;
-                        } else if (str_contains($valStr, 'tahun')) {
-                            $tahunAngkatanIndex = $index;
-                        } else if (str_contains($valStr, 'kelas')) {
-                            $kelasIndex = $index;
-                        } else if (str_contains($valStr, 'jurusan')) {
-                            $jurusanIndex = $index;
-                        } else if ($valStr === 'no' || $valStr === 'nomor') {
-                            $noIndex = $index;
-                        }
+                    $nonEmptyCount = 0;
+                    foreach ($values as $val) {
+                        if (!empty(trim((string)$val))) $nonEmptyCount++;
                     }
 
-                    // If basic columns are found, we mark the next rows as data
-                    if ($namaIndex !== -1 && $nisIndex !== -1) {
+                    if ($nonEmptyCount > 1) { // Wait for at least 2 columns
+                        foreach ($values as $index => $val) {
+                            $valStr = trim(strtolower((string)$val));
+                            if (empty($valStr)) continue;
+                            $headerColumns[$index] = trim((string)$val);
+                            
+                            if (str_contains($valStr, 'no') || str_contains($valStr, 'nomor')) {
+                                $noIndex = $index;
+                            } else if (str_contains($valStr, 'nama') || str_contains($valStr, 'siswa') || str_contains($valStr, 'peserta')) {
+                                if ($namaIndex === -1) $namaIndex = $index;
+                            } else if (str_contains($valStr, 'nis') || str_contains($valStr, 'induk')) {
+                                if ($nisIndex === -1) $nisIndex = $index;
+                            } else if (str_contains($valStr, 'tahun') || str_contains($valStr, 'angkatan')) {
+                                $tahunAngkatanIndex = $index;
+                            } else if (str_contains($valStr, 'kelas')) {
+                                $kelasIndex = $index;
+                            } else if (str_contains($valStr, 'jurusan')) {
+                                $jurusanIndex = $index;
+                            }
+                        }
+
+                        // Ultimate Fallback: if we didn't find Nama or NISN, guess them!
+                        // Guess Nama is the first text column that isn't NO.
+                        if ($namaIndex === -1) {
+                            foreach ($headerColumns as $index => $header) {
+                                if (!str_contains(strtolower($header), 'no') && !str_contains(strtolower($header), 'nomor')) {
+                                    $namaIndex = $index;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // Guess NIS is the next column after Nama
+                        if ($nisIndex === -1) {
+                            foreach ($headerColumns as $index => $header) {
+                                if ($index !== $namaIndex && !str_contains(strtolower($header), 'no') && !str_contains(strtolower($header), 'nomor')) {
+                                    $nisIndex = $index;
+                                    break;
+                                }
+                            }
+                        }
+
                         $isDataRow = true;
                     }
                     continue; // Skip the row whether it's header or title

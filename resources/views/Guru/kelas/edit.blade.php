@@ -67,20 +67,11 @@
             <label for="jurusan">Jurusan (Opsional)</label>
             <select id="jurusan" name="jurusan" class="form-control @error('jurusan') is-invalid @enderror">
                 <option value="">Pilih Jurusan</option>
-                <option value="TKJ" {{ old('jurusan', $kela->jurusan) == 'TKJ' ? 'selected' : '' }}>Teknik Komputer dan Jaringan (TKJ)</option>
-                <option value="RPL" {{ old('jurusan', $kela->jurusan) == 'RPL' ? 'selected' : '' }}>Rekayasa Perangkat Lunak (RPL)</option>
-                <option value="MM" {{ old('jurusan', $kela->jurusan) == 'MM' ? 'selected' : '' }}>Multimedia (MM)</option>
-                <option value="TBSM" {{ old('jurusan', $kela->jurusan) == 'TBSM' ? 'selected' : '' }}>Teknik dan Bisnis Sepeda Motor (TBSM)</option>
-                <option value="TKRO" {{ old('jurusan', $kela->jurusan) == 'TKRO' ? 'selected' : '' }}>Teknik Kendaraan Ringan Otomotif (TKRO)</option>
-                <option value="TKR" {{ old('jurusan', $kela->jurusan) == 'TKR' ? 'selected' : '' }}>Teknik Kendaraan Ringan (TKR)</option>
-                <option value="TEI" {{ old('jurusan', $kela->jurusan) == 'TEI' ? 'selected' : '' }}>Teknik Elektronika Industri (TEI)</option>
-                <option value="TAV" {{ old('jurusan', $kela->jurusan) == 'TAV' ? 'selected' : '' }}>Teknik Audio Video (TAV)</option>
-                <option value="TITL" {{ old('jurusan', $kela->jurusan) == 'TITL' ? 'selected' : '' }}>Teknik Instalasi Tenaga Listrik (TITL)</option>
-                <option value="TM" {{ old('jurusan', $kela->jurusan) == 'TM' ? 'selected' : '' }}>Teknik Mesin (TM)</option>
-                <option value="TP" {{ old('jurusan', $kela->jurusan) == 'TP' ? 'selected' : '' }}>Teknik Pengelasan (TP)</option>
-                <option value="AKL" {{ old('jurusan', $kela->jurusan) == 'AKL' ? 'selected' : '' }}>Akuntansi dan Keuangan Lembaga (AKL)</option>
-                <option value="OTKP" {{ old('jurusan', $kela->jurusan) == 'OTKP' ? 'selected' : '' }}>Otomatisasi dan Tata Kelola Perkantoran (OTKP)</option>
-                <option value="BDP" {{ old('jurusan', $kela->jurusan) == 'BDP' ? 'selected' : '' }}>Bisnis Daring dan Pemasaran (BDP)</option>
+                @foreach($jurusans as $jurusanItem)
+                    <option value="{{ $jurusanItem->nama_jurusan }}" {{ old('jurusan', $kela->jurusan) == $jurusanItem->nama_jurusan ? 'selected' : '' }}>
+                        {{ $jurusanItem->nama_jurusan }}
+                    </option>
+                @endforeach
             </select>
             @error('jurusan')
                 <span class="invalid-feedback">{{ $message }}</span>

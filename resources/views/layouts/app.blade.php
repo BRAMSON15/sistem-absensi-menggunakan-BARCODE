@@ -65,6 +65,11 @@
                             <i data-lucide="book-open"></i>
                             Mata Pelajaran
                         </a>
+                        <a href="{{ route('admin.jurusan.index') }}"
+                            class="menu-item {{ request()->routeIs('admin.jurusan.*') ? 'active' : '' }}">
+                            <i data-lucide="layers"></i>
+                            Jurusan
+                        </a>
                     @elseif(auth()->user()->isGuru())
                         <div class="menu-label">Menu Guru</div>
                         <a href="{{ route('guru.dashboard') }}"

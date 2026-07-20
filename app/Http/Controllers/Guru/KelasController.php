@@ -31,7 +31,8 @@ class KelasController extends Controller
     public function create()
     {
         $mataPelajarans = MataPelajaran::all();
-        return view('Guru.kelas.create', compact('mataPelajarans'));
+        $jurusans = \App\Models\Jurusan::all();
+        return view('Guru.kelas.create', compact('mataPelajarans', 'jurusans'));
     }
 
     public function store(Request $request)
@@ -59,7 +60,8 @@ class KelasController extends Controller
         }
 
         $mataPelajarans = MataPelajaran::all();
-        return view('Guru.kelas.edit', compact('kela', 'mataPelajarans'));
+        $jurusans = \App\Models\Jurusan::all();
+        return view('Guru.kelas.edit', compact('kela', 'mataPelajarans', 'jurusans'));
     }
 
     public function update(Request $request, Kelas $kela)

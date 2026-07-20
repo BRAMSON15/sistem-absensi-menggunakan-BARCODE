@@ -101,6 +101,7 @@ class GuruController extends Controller
             $isDataRow = false;
             $namaIndex = -1;
             $nipIndex = -1;
+            $usernameIndex = -1;
             $agamaIndex = -1;
             $alamatIndex = -1;
 
@@ -110,24 +111,52 @@ class GuruController extends Controller
 
                 // Find the header row dynamically
                 if (!$isDataRow) {
-                    foreach ($values as $index => $val) {
-                        $valStr = trim(strtolower((string)$val));
-                        if ($valStr === 'nama' || $valStr === 'nama guru') {
-                            $namaIndex = $index;
-                        }
-                        if ($valStr === 'nip') {
-                            $nipIndex = $index;
-                        }
-                        if ($valStr === 'agama') {
-                            $agamaIndex = $index;
-                        }
-                        if ($valStr === 'alamat') {
-                            $alamatIndex = $index;
-                        }
+                    $nonEmptyCount = 0;
+                    foreach ($values as $val) {
+                        if (!empty(trim((string)$val))) $nonEmptyCount++;
                     }
 
-                    // If both columns are found, we mark the next rows as data
-                    if ($namaIndex !== -1 && $nipIndex !== -1) {
+                    if ($nonEmptyCount > 1) { // Wait for at least 2 columns
+                        $headerColumns = [];
+                        foreach ($values as $index => $val) {
+                            $valStr = trim(strtolower((string)$val));
+                            if (empty($valStr)) continue;
+                            $headerColumns[$index] = trim((string)$val);
+                            
+                            if (str_contains($valStr, 'nama') || str_contains($valStr, 'guru')) {
+                                if ($namaIndex === -1) $namaIndex = $index;
+                            } else if (str_contains($valStr, 'nip') || str_contains($valStr, 'pegawai') || str_contains($valStr, 'nik')) {
+                                if ($nipIndex === -1) $nipIndex = $index;
+                            } else if (str_contains($valStr, 'user')) {
+                                $usernameIndex = $index;
+                            } else if (str_contains($valStr, 'agama')) {
+                                $agamaIndex = $index;
+                            } else if (str_contains($valStr, 'alamat')) {
+                                $alamatIndex = $index;
+                            }
+                        }
+
+                        // Ultimate Fallback: if we didn't find Nama or NIP, guess them!
+                        // Guess Nama is the first text column that isn't NO.
+                        if ($namaIndex === -1) {
+                            foreach ($headerColumns as $index => $header) {
+                                if (!str_contains(strtolower($header), 'no') && !str_contains(strtolower($header), 'nomor')) {
+                                    $namaIndex = $index;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // Guess NIP is the next column after Nama
+                        if ($nipIndex === -1) {
+                            foreach ($headerColumns as $index => $header) {
+                                if ($index !== $namaIndex && !str_contains(strtolower($header), 'no') && !str_contains(strtolower($header), 'nomor')) {
+                                    $nipIndex = $index;
+                                    break;
+                                }
+                            }
+                        }
+
                         $isDataRow = true;
                     }
                     continue; // Skip the row whether it's header or title
@@ -150,12 +179,20 @@ class GuruController extends Controller
                 // Parse additional data rows
                 $agama = isset($agamaIndex) && $agamaIndex !== -1 && isset($values[$agamaIndex]) ? trim((string)$values[$agamaIndex]) : null;
                 $alamat = isset($alamatIndex) && $alamatIndex !== -1 && isset($values[$alamatIndex]) ? trim((string)$values[$alamatIndex]) : null;
+                $username = isset($usernameIndex) && $usernameIndex !== -1 && isset($values[$usernameIndex]) && !empty(trim((string)$values[$usernameIndex])) 
+                    ? trim((string)$values[$usernameIndex]) 
+                    : $nip; // Fallback to NIP if username is not provided
+
+                // Check if username already exists
+                if (\App\Models\User::where('username', $username)->exists()) {
+                    continue;
+                }
 
                 $this->guruService->createGuru([
                     'nama_guru' => $nama,
                     'nip' => $nip,
-                    'username' => $nama, // Default username is Name
-                    'password' => $nip, // Default password is NIP
+                    'username' => $username,
+                    'password' => $nip, // Password is NIP
                     'agama' => $agama,
                     'alamat' => $alamat,
                 ]);

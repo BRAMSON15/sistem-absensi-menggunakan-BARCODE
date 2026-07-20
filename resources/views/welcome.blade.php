@@ -37,7 +37,7 @@
 
     <!-- Hero Section -->
     <section class="hero">
-        <img src="{{ asset('img/hero-bg.png') }}" alt="School Background" class="hero-bg">
+        <img src="{{ asset('img/image.png') }}" alt="School Background" class="hero-bg">
         <div class="hero-overlay"></div>
         <div class="container">
             <div class="hero-content" data-aos>

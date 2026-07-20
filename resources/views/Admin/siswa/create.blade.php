@@ -86,20 +86,11 @@
                     <label for="jurusan">Jurusan <span style="color: var(--danger);">*</span></label>
                     <select id="jurusan" name="jurusan" class="form-control @error('jurusan') is-invalid @enderror" required>
                         <option value="">Pilih Jurusan</option>
-                        <option value="TKJ" {{ old('jurusan') == 'TKJ' ? 'selected' : '' }}>Teknik Komputer dan Jaringan (TKJ)</option>
-                        <option value="RPL" {{ old('jurusan') == 'RPL' ? 'selected' : '' }}>Rekayasa Perangkat Lunak (RPL)</option>
-                        <option value="MM" {{ old('jurusan') == 'MM' ? 'selected' : '' }}>Multimedia (MM)</option>
-                        <option value="TBSM" {{ old('jurusan') == 'TBSM' ? 'selected' : '' }}>Teknik dan Bisnis Sepeda Motor (TBSM)</option>
-                        <option value="TKRO" {{ old('jurusan') == 'TKRO' ? 'selected' : '' }}>Teknik Kendaraan Ringan Otomotif (TKRO)</option>
-                        <option value="TKR" {{ old('jurusan') == 'TKR' ? 'selected' : '' }}>Teknik Kendaraan Ringan (TKR)</option>
-                        <option value="TEI" {{ old('jurusan') == 'TEI' ? 'selected' : '' }}>Teknik Elektronika Industri (TEI)</option>
-                        <option value="TAV" {{ old('jurusan') == 'TAV' ? 'selected' : '' }}>Teknik Audio Video (TAV)</option>
-                        <option value="TITL" {{ old('jurusan') == 'TITL' ? 'selected' : '' }}>Teknik Instalasi Tenaga Listrik (TITL)</option>
-                        <option value="TM" {{ old('jurusan') == 'TM' ? 'selected' : '' }}>Teknik Mesin (TM)</option>
-                        <option value="TP" {{ old('jurusan') == 'TP' ? 'selected' : '' }}>Teknik Pengelasan (TP)</option>
-                        <option value="AKL" {{ old('jurusan') == 'AKL' ? 'selected' : '' }}>Akuntansi dan Keuangan Lembaga (AKL)</option>
-                        <option value="OTKP" {{ old('jurusan') == 'OTKP' ? 'selected' : '' }}>Otomatisasi dan Tata Kelola Perkantoran (OTKP)</option>
-                        <option value="BDP" {{ old('jurusan') == 'BDP' ? 'selected' : '' }}>Bisnis Daring dan Pemasaran (BDP)</option>
+                        @foreach($jurusans as $jurusanItem)
+                            <option value="{{ $jurusanItem->nama_jurusan }}" {{ old('jurusan') == $jurusanItem->nama_jurusan ? 'selected' : '' }}>
+                                {{ $jurusanItem->nama_jurusan }}
+                            </option>
+                        @endforeach
                     </select>
                     @error('jurusan')
                         <span class="invalid-feedback">{{ $message }}</span>

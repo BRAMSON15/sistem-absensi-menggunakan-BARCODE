@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GuruController;
 use App\Http\Controllers\Admin\SiswaController;
 use App\Http\Controllers\Admin\MataPelajaranController;
+use App\Http\Controllers\Admin\JurusanController;
 use App\Http\Controllers\Guru\KelasController;
 use App\Http\Controllers\Guru\AbsensiController;
 use App\Http\Controllers\Ortu\MonitoringController;
@@ -34,6 +35,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::delete('mata-pelajaran/destroy-all', [MataPelajaranController::class, 'destroyAll'])->name('mata-pelajaran.destroyAll');
     Route::resource('mata-pelajaran', MataPelajaranController::class);
     Route::post('mata-pelajaran/import', [MataPelajaranController::class, 'import'])->name('mata-pelajaran.import');
+
+    Route::delete('jurusan/destroy-all', [JurusanController::class, 'destroyAll'])->name('jurusan.destroyAll');
+    Route::resource('jurusan', JurusanController::class);
+    Route::post('jurusan/import', [JurusanController::class, 'import'])->name('jurusan.import');
 });
 
 // Guru Routes
