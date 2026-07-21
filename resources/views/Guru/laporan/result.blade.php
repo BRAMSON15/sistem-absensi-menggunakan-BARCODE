@@ -37,6 +37,14 @@
                     📕 Export PDF
                 </button>
             </form>
+            <form action="{{ route('guru.laporan.send-wa', $kela) }}" method="POST" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin mengirim laporan ini ke nomor WA orang tua siswa (hanya yang memiliki no WA di sistem)? Ini mungkin memakan waktu agak lama.');">
+                @csrf
+                <input type="hidden" name="tanggal_mulai" value="{{ $validated['tanggal_mulai'] }}">
+                <input type="hidden" name="tanggal_akhir" value="{{ $validated['tanggal_akhir'] }}">
+                <button type="submit" class="btn" style="background-color: #25D366; color: white; border-color: #25D366; display: flex; align-items: center; gap: 0.5rem;">
+                    💬 Kirim WA Bulanan
+                </button>
+            </form>
         </div>
     </div>
 

@@ -100,6 +100,15 @@
                         <span class="invalid-feedback">{{ $message }}</span>
                     @enderror
                 </div>
+                
+                <div class="form-group">
+                    <label for="no_wa_ortu">No. WhatsApp Orang Tua</label>
+                    <input type="text" id="no_wa_ortu" name="no_wa_ortu" class="form-control @error('no_wa_ortu') is-invalid @enderror" value="{{ old('no_wa_ortu', $siswa->no_wa_ortu) }}" placeholder="Contoh: 081234567890">
+                    <small style="color: var(--text-muted); font-size: 0.75rem;">Opsional. Digunakan untuk mengirim notifikasi/laporan bulanan.</small>
+                    @error('no_wa_ortu')
+                        <span class="invalid-feedback">{{ $message }}</span>
+                    @enderror
+                </div>
             </div>
         </div>
 

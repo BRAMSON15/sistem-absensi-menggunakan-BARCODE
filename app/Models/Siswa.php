@@ -16,6 +16,7 @@ class Siswa extends Model
         'kelas',
         'jurusan',
         'barcode',
+        'no_wa_ortu',
         'data_tambahan',
     ];
 

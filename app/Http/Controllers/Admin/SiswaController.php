@@ -37,6 +37,7 @@ class SiswaController extends Controller
             'tahun_angkatan' => 'required|integer|min:2000|max:2099',
             'kelas' => 'required|integer|min:1|max:3',
             'jurusan' => 'required|string|in:TKJ,RPL,MM,TBSM,TKRO,TKR,TEI,TAV,TITL,TM,TP,AKL,OTKP,BDP',
+            'no_wa_ortu' => 'nullable|string|max:20',
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
@@ -60,6 +61,7 @@ class SiswaController extends Controller
             'tahun_angkatan' => 'required|integer|min:2000|max:2099',
             'kelas' => 'required|integer|min:1|max:3',
             'jurusan' => 'required|string|in:TKJ,RPL,MM,TBSM,TKRO,TKR,TEI,TAV,TITL,TM,TP,AKL,OTKP,BDP',
+            'no_wa_ortu' => 'nullable|string|max:20',
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
@@ -127,6 +129,7 @@ class SiswaController extends Controller
             $tahunAngkatanIndex = -1;
             $kelasIndex = -1;
             $jurusanIndex = -1;
+            $noWaIndex = -1;
 
             foreach ($rows as $row) {
                 // Ensure $row is an array and get its values
@@ -158,6 +161,8 @@ class SiswaController extends Controller
                                 $kelasIndex = $index;
                             } else if (str_contains($valStr, 'jurusan')) {
                                 $jurusanIndex = $index;
+                            } else if (str_contains($valStr, 'wa') || str_contains($valStr, 'whatsapp') || str_contains($valStr, 'no wa')) {
+                                $noWaIndex = $index;
                             }
                         }
 
@@ -215,7 +220,7 @@ class SiswaController extends Controller
                 $dataTambahan = [];
                 foreach ($values as $index => $val) {
                     if (isset($headerColumns[$index])) {
-                        if (!in_array($index, [$namaIndex, $nisIndex, $tahunAngkatanIndex, $kelasIndex, $jurusanIndex, $noIndex], true)) {
+                        if (!in_array($index, [$namaIndex, $nisIndex, $tahunAngkatanIndex, $kelasIndex, $jurusanIndex, $noWaIndex, $noIndex], true)) {
                             // Only add if there is a value
                             if (!empty(trim((string)$val))) {
                                 $dataTambahan[$headerColumns[$index]] = trim((string)$val);
@@ -224,12 +229,15 @@ class SiswaController extends Controller
                     }
                 }
 
+                $noWaOrtu = (isset($noWaIndex) && $noWaIndex !== -1 && !empty(trim((string)$values[$noWaIndex]))) ? trim((string)$values[$noWaIndex]) : null;
+
                 $this->siswaService->createSiswa([
                     'nama_siswa' => $nama,
                     'nis' => $nis,
                     'tahun_angkatan' => $tahunAngkatan,
                     'kelas' => $kelas,
                     'jurusan' => $jurusan,
+                    'no_wa_ortu' => $noWaOrtu,
                     'data_tambahan' => $dataTambahan,
                 ]);
                 $importedCount++;

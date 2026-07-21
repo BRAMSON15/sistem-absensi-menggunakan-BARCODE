@@ -29,8 +29,6 @@ class AuthController extends Controller
                 return redirect()->intended('/admin/dashboard');
             } elseif ($user->isGuru()) {
                 return redirect()->intended('/guru/dashboard');
-            } else {
-                return redirect()->intended('/ortu/monitoring');
             }
         }
 

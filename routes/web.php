@@ -9,7 +9,6 @@ use App\Http\Controllers\Admin\MataPelajaranController;
 use App\Http\Controllers\Admin\JurusanController;
 use App\Http\Controllers\Guru\KelasController;
 use App\Http\Controllers\Guru\AbsensiController;
-use App\Http\Controllers\Ortu\MonitoringController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -60,10 +59,5 @@ Route::middleware(['auth', 'role:guru'])->prefix('guru')->name('guru.')->group(f
     Route::post('kelas/{kela}/laporan/export-csv', [\App\Http\Controllers\Guru\LaporanController::class, 'exportCsv'])->name('laporan.export-csv');
     Route::post('kelas/{kela}/laporan/export-excel', [\App\Http\Controllers\Guru\LaporanController::class, 'exportExcel'])->name('laporan.export-excel');
     Route::post('kelas/{kela}/laporan/export-pdf', [\App\Http\Controllers\Guru\LaporanController::class, 'exportPdf'])->name('laporan.export-pdf');
-});
-
-// Orang Tua Routes
-Route::middleware(['auth', 'role:ortu'])->prefix('ortu')->name('ortu.')->group(function () {
-    Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
-    Route::match(['get', 'post'], '/monitoring/search', [MonitoringController::class, 'search'])->name('monitoring.search');
+    Route::post('kelas/{kela}/laporan/send-wa', [\App\Http\Controllers\Guru\LaporanController::class, 'sendWhatsapp'])->name('laporan.send-wa');
 });

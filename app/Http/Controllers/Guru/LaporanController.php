@@ -139,5 +139,52 @@ class LaporanController extends Controller
             'kela' => $kela,
             'validated' => $validated
         ]);
+    public function sendWhatsapp(Request $request, Kelas $kela, \App\Services\WhatsAppService $waService)
+    {
+        $guru = auth()->user()->guru;
+
+        if (!$this->kelasService->isKelasOwnedByGuru($kela, $guru)) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'tanggal_mulai' => 'required|date',
+            'tanggal_akhir' => 'required|date|after_or_equal:tanggal_mulai',
+        ]);
+
+        $html = $this->laporanService->generateExcelHtml(
+            $kela,
+            $validated['tanggal_mulai'],
+            $validated['tanggal_akhir']
+        );
+
+        $filename = 'Laporan_Absensi_Kelas_' . preg_replace('/[^A-Za-z0-9\-]/', '_', $kela->nama_kelas) . '_' . date('M_Y') . '.xls';
+        $tempPath = storage_path('app/public/' . $filename);
+        file_put_contents($tempPath, $html);
+
+        $siswas = $kela->siswas;
+        $successCount = 0;
+        $failCount = 0;
+        
+        $message = "Halo Bapak/Ibu Wali Murid,\nBerikut kami sampaikan lampiran laporan absensi untuk Kelas {$kela->nama_kelas} periode " . date('d/m/Y', strtotime($validated['tanggal_mulai'])) . " s/d " . date('d/m/Y', strtotime($validated['tanggal_akhir'])) . ".\n\nSalam hormat,\nGuru Mata Pelajaran {$kela->mataPelajaran->nama_mapel}";
+
+        foreach ($siswas as $siswa) {
+            if (!empty($siswa->no_wa_ortu)) {
+                $response = $waService->sendMessageWithFile($siswa->no_wa_ortu, $message, $tempPath, $filename);
+                if ($response['status']) {
+                    $successCount++;
+                } else {
+                    $failCount++;
+                }
+            } else {
+                $failCount++;
+            }
+        }
+
+        if (file_exists($tempPath)) {
+            @unlink($tempPath);
+        }
+
+        return redirect()->back()->with('success', "Laporan berhasil dikirim via WhatsApp. Terkirim: {$successCount} nomor. Gagal/Tanpa No WA: {$failCount} siswa.");
     }
 }
