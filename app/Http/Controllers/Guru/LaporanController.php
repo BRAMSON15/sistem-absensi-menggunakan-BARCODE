@@ -139,6 +139,8 @@ class LaporanController extends Controller
             'kela' => $kela,
             'validated' => $validated
         ]);
+    }
+
     public function sendWhatsapp(Request $request, Kelas $kela, \App\Services\WhatsAppService $waService)
     {
         $guru = auth()->user()->guru;
