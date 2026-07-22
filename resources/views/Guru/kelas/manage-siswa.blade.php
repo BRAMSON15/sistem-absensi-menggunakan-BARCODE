@@ -43,7 +43,8 @@
         @if($siswas->isEmpty())
             <div style="padding: 3rem; text-align: center; background: #fff1f2; border-radius: 12px; border: 1px solid #fee2e2;">
                 <i data-lucide="user-x" style="width: 48px; height: 48px; color: #e11d48; margin-bottom: 1rem;"></i>
-                <p style="color: #e11d48; font-weight: 700;">Tidak ada siswa dengan tingkat kelas {{ $kela->tingkat_kelas }}</p>
+                <p style="color: #e11d48; font-weight: 700;">Belum ada data siswa di sistem.</p>
+                <p style="color: #e11d48; font-size: 0.85rem; margin-top: 0.5rem;">Silakan minta Admin untuk menambahkan data siswa terlebih dahulu.</p>
             </div>
         @else
             <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; background: #ffffff;" id="siswaList">

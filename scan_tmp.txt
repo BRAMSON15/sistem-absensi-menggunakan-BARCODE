@@ -138,19 +138,26 @@
         top: 0;
         left: 0;
     }
+    
+    #camera-container canvas.drawingBuffer {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
 </style>
 @endpush
 
 @push('scripts')
-<!-- HTML5-QRCode - Robust barcode scanner for screens -->
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<!-- Quagga JS - Better barcode scanner -->
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
 <script>
-    let html5QrCode = null;
+    let cameraStream = null;
     let isScanning = false;
     let absensiData = [];
     let lastScannedCode = '';
     let lastScanTime = 0;
     let detectionAttempts = 0;
+    let detectedCodes = {}; // Track code frequency
 
     // Tab Switching
     function switchTab(tab) {
@@ -182,7 +189,193 @@
     }
 
     // Camera Functions
-    function startCamera() {
+    async function startCamera() {
+        try {
+            const container = document.getElementById('camera-container');
+            const status = document.getElementById('camera-status');
+            const detectionInfo = document.getElementById('detection-info');
+            const startBtn = document.getElementById('start-camera');
+            const stopBtn = document.getElementById('stop-camera');
+            const captureBtn = document.getElementById('capture-photo');
+
+            console.log('Starting Quagga scanner...');
+
+            // Reset detection tracking
+            detectionAttempts = 0;
+            detectedCodes = {};
+
+            // Show camera UI
+            container.style.display = 'block';
+            status.style.display = 'block';
+            detectionInfo.style.display = 'block';
+            status.innerHTML = '<p style="margin: 0; color: #f39c12; font-weight: bold;">⏳ Memulai kamera...</p>';
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            captureBtn.style.display = 'inline-block';
+
+            // Initialize Quagga with optimized settings for screen scanning
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#camera-container'),
+                    constraints: {
+                        width: { min: 640, ideal: 1280, max: 1920 },
+                        height: { min: 480, ideal: 720, max: 1080 },
+                        facingMode: "environment",
+                        aspectRatio: { min: 1, max: 2 }
+                    },
+                },
+                locator: {
+                    patchSize: "large", // Changed to large for better screen detection
+                    halfSample: false // Disable halfSample for better accuracy on screens
+                },
+                numOfWorkers: navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4, // Maximize workers
+                decoder: {
+                    readers: [
+                        "code_128_reader", // Put the most common one first (JsBarcode default)
+                        "ean_reader",
+                        "code_39_reader"
+                    ],
+                    debug: {
+                        drawBoundingBox: true,
+                        showFrequency: false,
+                        drawScanline: true,
+                        showPattern: false
+                    },
+                    multiple: false
+                },
+                locate: true
+            }, function(err) {
+                if (err) {
+                    console.error('Quagga initialization error:', err);
+                    status.innerHTML = '<p style="margin: 0; color: #e74c3c; font-weight: bold;">❌ Error: ' + err.message + '</p>';
+                    stopCamera();
+                    showError('Gagal memulai kamera: ' + err.message);
+                    return;
+                }
+                
+                console.log("Quagga initialization finished. Ready to start");
+                Quagga.start();
+                isScanning = true;
+                
+                status.innerHTML = '<p style="margin: 0; color: #27ae60; font-weight: bold;">📷 Kamera Aktif - Arahkan barcode ke kamera<br><small style="color: #7f8c8d;">Jarak ideal: 15-25 cm, layar HP maksimal terang</small></p>';
+            });
+
+            // Listen for detected barcodes with confidence scoring
+            Quagga.onDetected(function(result) {
+                if (!isScanning) return;
+
+                const code = result.codeResult.code;
+                const now = Date.now();
+                
+                // Calculate confidence based on error rate
+                const errors = result.codeResult.decodedCodes.filter(x => x.error !== undefined);
+                const avgError = errors.reduce((sum, x) => sum + x.error, 0) / errors.length;
+                const confidence = (1 - avgError) * 100;
+                
+                console.log('Barcode detected:', code, 'Confidence:', confidence.toFixed(2) + '%');
+
+                // Track code frequency for validation
+                if (!detectedCodes[code]) {
+                    detectedCodes[code] = { count: 0, confidence: [] };
+                }
+                detectedCodes[code].count++;
+                detectedCodes[code].confidence.push(confidence);
+
+                // Update detection info
+                document.getElementById('detection-count').innerHTML = 
+                    `🔍 Terdeteksi: <strong>${code}</strong> (${detectedCodes[code].count}x, ${confidence.toFixed(0)}% akurat)`;
+
+                // Only process if detected multiple times OR decent confidence
+                if (detectedCodes[code].count >= 1 && confidence > 60) {
+                    // Prevent duplicate scans within 3 seconds
+                    if (code === lastScannedCode && (now - lastScanTime) < 3000) {
+                        console.log('Duplicate scan ignored');
+                        return;
+                    }
+
+                    lastScannedCode = code;
+                    lastScanTime = now;
+
+                    // Update status
+                    status.innerHTML = '<p style="margin: 0; color: #f39c12; font-weight: bold;">⏳ Memproses barcode: ' + code + '</p>';
+
+                    // Pause scanning
+                    isScanning = false;
+                    Quagga.pause();
+
+                    // Process the barcode
+                    processScan(code).then(() => {
+                        // Reset detection tracking
+                        detectedCodes = {};
+                        
+                        // Resume scanning after 3 seconds
+                        setTimeout(() => {
+                            if (Quagga) {
+                                Quagga.start();
+                                isScanning = true;
+                                status.innerHTML = '<p style="margin: 0; color: #27ae60; font-weight: bold;">📷 Kamera Aktif - Arahkan barcode ke kamera</p>';
+                                document.getElementById('detection-count').innerHTML = 'Mencoba mendeteksi...';
+                            }
+                        }, 3000);
+                    });
+                }
+            });
+
+            // Listen for processing events (for debugging)
+            Quagga.onProcessed(function(result) {
+                detectionAttempts++;
+                
+                // Update attempt counter every 10 attempts
+                if (detectionAttempts % 10 === 0) {
+                    const detectionCount = document.getElementById('detection-count');
+                    if (Object.keys(detectedCodes).length === 0) {
+                        detectionCount.innerHTML = `🔍 Mencoba mendeteksi... (${detectionAttempts} percobaan)`;
+                    }
+                }
+
+                const drawingCtx = Quagga.canvas.ctx.overlay;
+                const drawingCanvas = Quagga.canvas.dom.overlay;
+
+                if (result) {
+                    if (result.boxes) {
+                        drawingCtx.clearRect(0, 0, parseInt(drawingCanvas.getAttribute("width")), parseInt(drawingCanvas.getAttribute("height")));
+                        result.boxes.filter(function (box) {
+                            return box !== result.box;
+                        }).forEach(function (box) {
+                            Quagga.ImageDebug.drawPath(box, {x: 0, y: 1}, drawingCtx, {color: "green", lineWidth: 2});
+                        });
+                    }
+
+                    if (result.box) {
+                        Quagga.ImageDebug.drawPath(result.box, {x: 0, y: 1}, drawingCtx, {color: "#00F", lineWidth: 2});
+                    }
+
+                    if (result.codeResult && result.codeResult.code) {
+                        Quagga.ImageDebug.drawPath(result.line, {x: 'x', y: 'y'}, drawingCtx, {color: 'red', lineWidth: 3});
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('Error starting camera:', error);
+            showError('Tidak dapat mengakses kamera: ' + error.message);
+        }
+    }
+
+    function stopCamera() {
+        isScanning = false;
+        lastScannedCode = '';
+        lastScanTime = 0;
+        detectionAttempts = 0;
+        detectedCodes = {};
+        
+        if (Quagga) {
+            console.log('Stopping Quagga...');
+            Quagga.stop();
+        }
+
         const container = document.getElementById('camera-container');
         const status = document.getElementById('camera-status');
         const detectionInfo = document.getElementById('detection-info');
@@ -190,107 +383,106 @@
         const stopBtn = document.getElementById('stop-camera');
         const captureBtn = document.getElementById('capture-photo');
 
-        console.log('Starting HTML5-QRCode scanner...');
+        container.style.display = 'none';
+        status.style.display = 'none';
+        detectionInfo.style.display = 'none';
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+        captureBtn.style.display = 'none';
+        
+        console.log('Camera stopped');
+    }
 
-        // Reset detection tracking
-        detectionAttempts = 0;
-
-        // Show camera UI
-        container.style.display = 'block';
-        status.style.display = 'block';
-        detectionInfo.style.display = 'block';
-        status.innerHTML = '<p style="margin: 0; color: #f39c12; font-weight: bold;">⏳ Memulai kamera...</p>';
-        startBtn.style.display = 'none';
-        stopBtn.style.display = 'inline-block';
-        if(captureBtn) captureBtn.style.display = 'none';
-
-        if (!html5QrCode) {
-            html5QrCode = new Html5Qrcode("camera-container");
+    // Capture photo for manual processing
+    function capturePhoto() {
+        if (!Quagga) {
+            showError('Kamera belum aktif');
+            return;
         }
 
-        html5QrCode.start(
-            { facingMode: "environment" },
-            {
-                fps: 10,
-                qrbox: { width: 350, height: 150 }, // Optimized rectangle for 1D barcodes
-                aspectRatio: 1.333334,
-                formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39, Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8 ]
-            },
-            (decodedText, decodedResult) => {
-                // Success callback
-                const now = Date.now();
-                if (decodedText === lastScannedCode && (now - lastScanTime) < 3000) {
-                    return; // Prevent duplicate scan
-                }
-                
-                lastScannedCode = decodedText;
-                lastScanTime = now;
-                
-                status.innerHTML = '<p style="margin: 0; color: #f39c12; font-weight: bold;">⏳ Memproses barcode: ' + decodedText + '</p>';
-                document.getElementById('detection-count').innerHTML = `🔍 Terdeteksi: <strong>${decodedText}</strong>`;
-                
-                // Pause scanning visually to avoid spam
-                html5QrCode.pause();
-                
-                processScan(decodedText).then(() => {
+        try {
+            // Get the current video frame
+            const track = Quagga.CameraAccess.getActiveTrack();
+            if (!track) {
+                showError('Tidak dapat mengakses video stream');
+                return;
+            }
+
+            // Create canvas to capture frame
+            const video = document.querySelector('#camera-container video');
+            if (!video) {
+                showError('Video element tidak ditemukan');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            // Pause live scanning
+            isScanning = false;
+            Quagga.pause();
+
+            // Show processing message
+            document.getElementById('camera-status').innerHTML = 
+                '<p style="margin: 0; color: #f39c12; font-weight: bold;">📸 Memproses foto...</p>';
+
+            // Try to decode the captured image
+            Quagga.decodeSingle({
+                decoder: {
+                    readers: [
+                        "code_128_reader",
+                        "ean_reader",
+                        "ean_8_reader",
+                        "code_39_reader",
+                        "code_39_vin_reader",
+                        "codabar_reader",
+                        "upc_reader",
+                        "upc_e_reader",
+                        "i2of5_reader"
+                    ]
+                },
+                locate: true,
+                src: canvas.toDataURL()
+            }, function(result) {
+                if (result && result.codeResult) {
+                    const code = result.codeResult.code;
+                    console.log('Captured barcode:', code);
+                    processScan(code).then(() => {
+                        setTimeout(() => {
+                            if (Quagga) {
+                                Quagga.start();
+                                isScanning = true;
+                                document.getElementById('camera-status').innerHTML = 
+                                    '<p style="margin: 0; color: #27ae60; font-weight: bold;">📷 Kamera Aktif</p>';
+                            }
+                        }, 3000);
+                    });
+                } else {
+                    showError('Tidak dapat mendeteksi barcode dari foto. Coba lagi dengan posisi yang lebih baik.');
+                    // Resume scanning
                     setTimeout(() => {
-                        if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.PAUSED) {
-                            html5QrCode.resume();
-                            status.innerHTML = '<p style="margin: 0; color: #27ae60; font-weight: bold;">📷 Kamera Aktif - Arahkan barcode ke area scan</p>';
+                        if (Quagga) {
+                            Quagga.start();
+                            isScanning = true;
+                            document.getElementById('camera-status').innerHTML = 
+                                '<p style="margin: 0; color: #27ae60; font-weight: bold;">📷 Kamera Aktif</p>';
                         }
                     }, 2000);
-                });
-            },
-            (errorMessage) => {
-                // Failure callback - gets called constantly when no barcode is found
-                detectionAttempts++;
-                if (detectionAttempts % 20 === 0) {
-                    document.getElementById('detection-count').innerHTML = `🔍 Mencoba mendeteksi... (${detectionAttempts} percobaan)`;
                 }
-            }
-        ).then(() => {
-            isScanning = true;
-            status.innerHTML = '<p style="margin: 0; color: #27ae60; font-weight: bold;">📷 Kamera Aktif - Arahkan barcode ke area scan</p>';
-            document.getElementById('detection-count').innerHTML = 'Mencoba mendeteksi...';
-        }).catch((err) => {
-            console.error('Camera initialization error:', err);
-            status.innerHTML = '<p style="margin: 0; color: #e74c3c; font-weight: bold;">❌ Error: ' + err + '</p>';
-            showError('Gagal memulai kamera. Pastikan browser memiliki izin mengakses kamera.');
-            stopCamera();
-        });
-    }
-
-    function stopCamera() {
-        const container = document.getElementById('camera-container');
-        const status = document.getElementById('camera-status');
-        const detectionInfo = document.getElementById('detection-info');
-        const startBtn = document.getElementById('start-camera');
-        const stopBtn = document.getElementById('stop-camera');
-
-        if (html5QrCode && isScanning) {
-            html5QrCode.stop().then((ignore) => {
-                isScanning = false;
-                container.style.display = 'none';
-                status.style.display = 'none';
-                detectionInfo.style.display = 'none';
-                startBtn.style.display = 'inline-block';
-                stopBtn.style.display = 'none';
-                console.log('Camera stopped');
-            }).catch((err) => {
-                console.log('Error stopping camera', err);
             });
-        } else {
-            isScanning = false;
-            container.style.display = 'none';
-            status.style.display = 'none';
-            detectionInfo.style.display = 'none';
-            startBtn.style.display = 'inline-block';
-            stopBtn.style.display = 'none';
-        }
-    }
 
-    function capturePhoto() {
-        showError('Fitur foto tidak digunakan di versi scanner ini. Scanner akan membaca secara otomatis.');
+        } catch (error) {
+            console.error('Error capturing photo:', error);
+            showError('Gagal mengambil foto: ' + error.message);
+            // Resume scanning
+            if (Quagga) {
+                Quagga.start();
+                isScanning = true;
+            }
+        }
     }
 
     // Manual Input
@@ -443,3 +635,4 @@
 </script>
 @endpush
 @endsection
+

@@ -57,8 +57,13 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                     <div class="form-group">
-                        <label for="nis">NIS (5 digit) <span style="color: var(--danger);">*</span></label>
-                        <input type="text" id="nis" name="nis" class="form-control @error('nis') is-invalid @enderror" value="{{ old('nis', $siswa->nis) }}" maxlength="5" required>
+                        <label for="nis">NIS/NISN <span style="color: var(--danger);">*</span></label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i data-lucide="hash"></i></span>
+                            </div>
+                            <input type="text" id="nis" name="nis" class="form-control @error('nis') is-invalid @enderror" value="{{ old('nis', $siswa->nis) }}" maxlength="20" required>
+                        </div>
                         @error('nis')
                             <span class="invalid-feedback">{{ $message }}</span>
                         @enderror

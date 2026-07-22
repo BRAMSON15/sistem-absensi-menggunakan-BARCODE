@@ -122,7 +122,7 @@ class KelasController extends Controller
             abort(403);
         }
 
-        $siswas = $this->siswaService->getSiswasByKelas($kela->tingkat_kelas);
+        $siswas = $this->siswaService->getAllSiswas();
         $kelaSiswas = $kela->siswas->pluck('id')->toArray();
 
         return view('Guru.kelas.manage-siswa', compact('kela', 'siswas', 'kelaSiswas'));

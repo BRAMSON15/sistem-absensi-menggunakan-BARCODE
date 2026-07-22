@@ -33,7 +33,7 @@ class SiswaController extends Controller
     {
         $validated = $request->validate([
             'nama_siswa' => 'required|string|max:255',
-            'nis' => 'required|string|unique:siswas,nis|size:5',
+            'nis' => 'required|string|unique:siswas,nis|max:20',
             'tahun_angkatan' => 'required|integer|min:2000|max:2099',
             'kelas' => 'required|integer|min:1|max:3',
             'jurusan' => 'required|string|in:TKJ,RPL,MM,TBSM,TKRO,TKR,TEI,TAV,TITL,TM,TP,AKL,OTKP,BDP',
@@ -57,7 +57,7 @@ class SiswaController extends Controller
     {
         $validated = $request->validate([
             'nama_siswa' => 'required|string|max:255',
-            'nis' => 'required|string|size:5|unique:siswas,nis,' . $siswa->id,
+            'nis' => 'required|string|max:20|unique:siswas,nis,' . $siswa->id,
             'tahun_angkatan' => 'required|integer|min:2000|max:2099',
             'kelas' => 'required|integer|min:1|max:3',
             'jurusan' => 'required|string|in:TKJ,RPL,MM,TBSM,TKRO,TKR,TEI,TAV,TITL,TM,TP,AKL,OTKP,BDP',
